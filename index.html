@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Archive Player</title>
+    <style>
+        /* Style the background to cover the entire screen */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #424549; /* Set the background color to #424549 */
+        }
+
+        /* Center the video player container */
+        .video-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Style the video element */
+        video {
+            width: 100%;
+            max-width: 800px; /* Limit the maximum width */
+            height: auto;
+        }
+
+        /* Center the control bar */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #333;
+            padding: 10px;
+            margin-top: 20px; /* Add some space between the video and controls */
+        }
+
+        /* Style the control buttons */
+        .controls button {
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        /* Style the file input button container */
+        .file-input-container {
+            text-align: center; /* Center the file input and buttons */
+            margin-top: 20px;
+        }
+
+        /* Style the file input button */
+        #file-input {
+            display: none;
+        }
+
+        /* Style the "Upload" and "Archive" buttons */
+        #upload-button, #archive-button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Style the sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -300px; /* Move off-screen to hide it */
+            width: 300px;
+            height: 100%;
+            background-color: #424549;
+            padding: 20px;
+            overflow-y: auto;
+            transition: right 0.3s; /* Add a transition for smooth sliding */
+        }
+
+        /* Style video entries in the sidebar */
+        .sidebar-video {
+            color: white;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        /* Style video entries on hover */
+        .sidebar-video:hover {
+            text-decoration: underline;
+        }
+
+        /* Style the button to show/hide the sidebar */
+        #toggle-sidebar-button {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <video id="video-player" controls>
+            <!-- Add multiple source elements for different file formats -->
+            <source src="" type="video/mp4">
+            <source src="" type="video/quicktime">
+            <source src="" type="audio/mpeg">
+            Your browser does not support the video tag.
+        </video>
+        <div class="controls">
+            <button id="play-pause-button">&#9658;</button>
+            <input id="seek-bar" type="range" min="0" step="1" value="0">
+            <button id="mute-button">&#128266;</button>
+            <input id="volume-bar" type="range" min="0" max="1" step="0.01" value="1">
+        </div>
+        <div class="file-input-container">
+            <!-- Adjust the accept attribute to accept multiple formats -->
+            <input type="file" id="file-input" accept=".mp3,.mp4,.mov,.avi">
+            <label for="file-input" id="upload-button">Upload Media</label>
+            <button id="archive-button" onclick="archiveMedia()">Archive Media</button>
+        </div>
+    </div>
+
+    <!-- Sidebar to display archived videos -->
+    <div class="sidebar" id="sidebar">
+        <h2>Archived Videos</h2>
+        <!-- Your archived video entries will be added here -->
+    </div>
+
+    <!-- Button to show/hide the sidebar -->
+    <button id="toggle-sidebar-button" onclick="toggleSidebar()">&#9654;</button>
+
+    <script>
+        const video = document.getElementById("video-player");
+        const playPauseButton = document.getElementById("play-pause-button");
+        const seekBar = document.getElementById("seek-bar");
+        const muteButton = document.getElementById("mute-button");
+        const volumeBar = document.getElementById("volume-bar");
+        const fileInput = document.getElementById("file-input");
+        const sidebar = document.getElementById("sidebar");
+        const toggleSidebarButton = document.getElementById("toggle-sidebar-button");
+        const archivedFiles = new Set(); // Set to track archived files
+
+        playPauseButton.addEventListener("click", function() {
+            if (video.paused || video.ended) {
+                video.play();
+                playPauseButton.innerHTML = "&#9616;&#9616;";
+            } else {
+                video.pause();
+                playPauseButton.innerHTML = "&#9658;";
+            }
+        });
+
+        // Add a double-click event listener to the video element
+        video.addEventListener("dblclick", function() {
+            fileInput.click(); // Trigger the file input click event on double-click
+        });
+
+        function loadMedia() {
+            const file = fileInput.files[0];
+            if (file) {
+                const fileType = file.type;
+                const validTypes = ["video/mp4", "video/quicktime", "audio/mpeg"];
+
+                // Check if the selected file type is supported
+                if (validTypes.includes(fileType)) {
+                    video.src = URL.createObjectURL(file);
+                    video.load();
+                    video.play();
+                    playPauseButton.innerHTML = "&#9616;&#9616;";
+
+                    // Archive the video and add it to the sidebar if not already archived
+                    if (!archivedFiles.has(file.name)) {
+                        archiveVideo(file.name);
+                        archivedFiles.add(file.name);
+                    }
+                } else {
+                    alert("Unsupported file format. Please select a valid media file.");
+                }
+            }
+        }
+
+        function archiveMedia() {
+            const file = fileInput.files[0];
+            if (file) {
+                // Archive the video and add it to the sidebar if not already archived
+                if (!archivedFiles.has(file.name)) {
+                    archiveVideo(file.name);
+                    archivedFiles.add(file.name);
+                }
+            }
+        }
+
+        function archiveVideo(fileName) {
+            // Create a new video entry in the sidebar
+            const videoEntry = document.createElement("div");
+            videoEntry.className = "sidebar-video";
+            videoEntry.textContent = fileName;
+
+            // Add a click event listener to load the archived video
+            videoEntry.addEventListener("click", function() {
+                loadArchivedVideo(fileName);
+            });
+
+            // Append the video entry to the sidebar
+            sidebar.appendChild(videoEntry);
+        }
+
+        function loadArchivedVideo(fileName) {
+            // Load and play the archived video
+            const videoSource = `path/to/archived/videos/${fileName}`;
+            video.src = videoSource;
+            video.load();
+            video.play();
+            playPauseButton.innerHTML = "&#9616;&#9616;";
+        }
+
+        function toggleSidebar() {
+            // Toggle the visibility of the sidebar by adjusting the right property
+            if (sidebar.style.right === "0px") {
+                sidebar.style.right = "-300px"; // Move off-screen
+                toggleSidebarButton.innerHTML = "&#9654;";
+            } else {
+                sidebar.style.right = "0px"; // Bring on-screen
+                toggleSidebarButton.innerHTML = "&#9664;";
+            }
+        }
+    </script>
+</body>
+</html>
